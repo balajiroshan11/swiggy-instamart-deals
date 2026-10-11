@@ -26,15 +26,6 @@ if (token && token !== 'your_bot_token_here') {
   bot = new TelegramBot(token, { polling: true });
   console.log('🤖 Telegram Bot is connected and listening for commands!');
 
-  // Register commands for the Telegram Menu button
-  bot.setMyCommands([
-    { command: 'start', description: 'Show welcome message & commands' },
-    { command: 'store', description: 'View or set Swiggy Dark Store IDs' },
-    { command: 'setdiscount', description: 'Set discount % for each of the 5 workers' },
-    { command: 'myinfo', description: 'View your profile & active store' },
-    { command: 'status', description: 'Check bot status & scan stats' }
-  ]).catch(err => console.error('[Bot] Failed to set menu commands:', err.message));
-
   // Error handling for polling & network hiccups
   bot.on('polling_error', (err) => {
     console.error('[Bot Polling Error]', err.code || '', err.message || err);
@@ -63,6 +54,26 @@ if (bot) {
   } else {
     console.log('[Bot Security] Owner-only command access enabled.');
   }
+
+  // Remove global command menus, then show commands only in the owner's private chat.
+  const ownerCommands = [
+    { command: 'start', description: 'Show welcome message & commands' },
+    { command: 'store', description: 'View or set Swiggy Dark Store IDs' },
+    { command: 'setdiscount', description: 'Set discount thresholds' },
+    { command: 'myinfo', description: 'View owner configuration' },
+    { command: 'status', description: 'Check bot status' }
+  ];
+
+  Promise.all([
+    bot.setMyCommands([], { scope: { type: 'default' } }),
+    bot.setMyCommands([], { scope: { type: 'all_private_chats' } })
+  ]).then(() => {
+    if (/^\d+$/.test(ownerTelegramId)) {
+      return bot.setMyCommands(ownerCommands, {
+        scope: { type: 'chat', chat_id: Number(ownerTelegramId) }
+      });
+    }
+  }).catch(err => console.error('[Bot] Failed to configure owner-only command menu:', err.message));
 
   const originalOnText = bot.onText.bind(bot);
   bot.onText = (regexp, callback) => originalOnText(regexp, (msg, match) => {
