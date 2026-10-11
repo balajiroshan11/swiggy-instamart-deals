@@ -1,3 +1,4 @@
+
 name: Interactive Telegram Bot Test
 
 on:
@@ -33,6 +34,7 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          OWNER_TELEGRAM_ID: ${{ secrets.OWNER_TELEGRAM_ID }}
           SWIGGY_STORE_ID: ${{ secrets.SWIGGY_STORE_ID }}
           SWIGGY_PRIMARY_STORE_ID: ${{ secrets.SWIGGY_PRIMARY_STORE_ID }}
           SWIGGY_SECONDARY_STORE_ID: ${{ secrets.SWIGGY_SECONDARY_STORE_ID }}
