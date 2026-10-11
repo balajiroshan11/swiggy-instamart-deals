@@ -50,8 +50,38 @@ if (token && token !== 'your_bot_token_here') {
 
 // Telegram Bot Interactive Commands & Event Handlers
 if (bot) {
+  // Owner-only access. Set OWNER_TELEGRAM_ID to the owner's numeric Telegram user ID.
+  const ownerTelegramId = String(process.env.OWNER_TELEGRAM_ID || '').trim();
+  const isOwner = (msg) =>
+    Boolean(ownerTelegramId && msg?.from?.id != null &&
+      String(msg.from.id) === ownerTelegramId);
+
+  if (!ownerTelegramId) {
+    console.error('[Bot Security] OWNER_TELEGRAM_ID is missing. Interactive commands are locked.');
+  } else if (!/^\d+$/.test(ownerTelegramId)) {
+    console.error('[Bot Security] OWNER_TELEGRAM_ID must be a numeric Telegram user ID. Interactive commands are locked.');
+  } else {
+    console.log('[Bot Security] Owner-only command access enabled.');
+  }
+
+  const originalOnText = bot.onText.bind(bot);
+  bot.onText = (regexp, callback) => originalOnText(regexp, (msg, match) => {
+    if (!isOwner(msg)) {
+      if (msg?.chat?.id != null) {
+        const reason = ownerTelegramId
+          ? '🔒 This is a private bot. Only the owner can use its commands.'
+          : '⚠️ Bot owner access is not configured. Please contact the owner.';
+        bot.sendMessage(msg.chat.id, reason).catch((err) =>
+          console.error('[Bot Security] Could not send access notice:', err.message)
+        );
+      }
+      return;
+    }
+    return callback(msg, match);
+  });
   // Reject media/file uploads
   const rejectMedia = (msg) => {
+    if (!isOwner(msg)) return;
     bot.sendMessage(
       msg.chat.id,
       '⚠️ <b>Uploads are disabled.</b>\n\nPlease choose an option from the <b>Menu</b> button or use <code>/store</code> to configure your store ID.',
@@ -288,6 +318,12 @@ Send: <code>/store &lt;primaryId&gt; [secondaryId]</code>
 
   // Handle button clicks (categories and discount presets)
   bot.on('callback_query', async (query) => {
+    if (!isOwner({ from: query.from })) {
+      return bot.answerCallbackQuery(query.id, {
+        text: 'Only the bot owner can use these controls.',
+        show_alert: true
+      }).catch((err) => console.error('[Bot Security] Callback rejection failed:', err.message));
+    }
     const data = query.data || '';
 
     // Handle discount quick preset buttons (legacy / quick set)
